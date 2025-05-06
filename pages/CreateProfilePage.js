@@ -267,71 +267,39 @@ const CreateProfilePage = ({ navigation }) => {
 
     setStep((s) => s + 1);
   };
-  const handleShareLocation = () => {
-    Geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        console.log('📍 Location obtained:', latitude, longitude);
+  const handleShareLocation = async () => {
+    const payload = {
+      locationX: "39.9097", // Çankaya Latitude
+      locationY: "32.8597", // Çankaya Longitude
+      matchRange: matchRange, // from slider
+    };
   
-        const payload = {
-          locationX: latitude.toString(),
-          locationY: longitude.toString(),
-          matchRange: matchRange,
-        };
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
   
-        try {
-          const token = await AsyncStorage.getItem('accessToken');
+      const res = await fetch('https://api.matchaapp.net/api/Location/CreateUserLocation', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
   
-          const res = await fetch('https://api.matchaapp.net/api/Location/CreateUserLocation', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-          });
+      const data = await res.json();
   
-          const data = await res.json();
+      if (!res.ok) {
+        console.error('❌ Location creation failed:', data);
+        return Alert.alert('Error', data.errorMessages?.[0] || 'Could not create location.');
+      }
   
-          if (!res.ok && data.errorMessages?.[0]?.includes('already')) {
-            console.warn('⚠️ Location already exists, switching to update');
+      Alert.alert('✅ Success', 'Location saved!');
+      setStep(6); // move to photo upload
   
-            const updateRes = await fetch('https://api.matchaapp.net/api/Location/UpdateUserLocation', {
-              method: 'PUT',
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(payload),
-            });
-  
-            const updateData = await updateRes.json();
-  
-            if (!updateRes.ok) {
-              console.error('❌ Location update failed:', updateData);
-              return Alert.alert('Error', updateData.errorMessages?.[0] || 'Could not update location.');
-            }
-  
-            Alert.alert('✅ Success', 'Location updated!');
-            setStep(6);
-          } else if (!res.ok) {
-            console.error('❌ Location creation failed:', data);
-            return Alert.alert('Error', data.errorMessages?.[0] || 'Could not create location.');
-          } else {
-            Alert.alert('✅ Success', 'Location saved!');
-            setStep(6);
-          }
-        } catch (err) {
-          console.error('❌ Location error:', err);
-          Alert.alert('Error', 'Something went wrong while saving your location.');
-        }
-      },
-      (error) => {
-        console.error('❌ Geolocation error:', error);
-        Alert.alert('Error', 'Failed to get location. Please enable location services.');
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-    );
+    } catch (err) {
+      console.error('❌ Location error:', err);
+      Alert.alert('Error', 'Something went wrong while saving your location.');
+    }
   };
   
   const handleSubmitCurrentMode = async () => {
